@@ -1,6 +1,6 @@
-#include "server.h"
+#include "serverfunc.h"
 
-void request (int sockfd) {
+void getRequest (int sockfd) {
     /* check connection */
     if (recv(sockfd, buffer, BUFFER_SIZE, MSG_PEEK) < 1) {
         if (recv(sockfd, buffer, BUFFER_SIZE, MSG_PEEK) < 0)
@@ -11,25 +11,18 @@ void request (int sockfd) {
     /* putting */
     if (fd2Service.at(sockfd).bytes != 0)
         return putFile(sockfd);
-    
-    int n = numOfByte(sockfd);
-    if (n < 1)
-        return;
         
     /* recv command */
-    bezero(buffer, BUFFER_SIZE);
+    bzero(buffer, BUFFER_SIZE);
     if (recv(sockfd, buffer, BUFFER_SIZE, 0) < 1)
         return closeSocket(sockfd);
-    OK(sockfd);
     
     /* parse command */
-    char command[BUFFER_SIZE];
-    memcpy(command, buffer, BUFFER_SIZE);
-    command = strtok(command, " ");
-    switch (command[0]) {
+    char *cmd = strtok(buffer, " "), *recver, *type;
+    switch (cmd[0]) {
         case 'L' :
-            if ((command = strtok(NULL, " ")) != NULL)
-                return setUpService(sockfd, string(command));
+            if ((cmd = strtok(NULL, " ")) != NULL)
+                return setUpService(sockfd, string(cmd));
             else
                 return ls(sockfd);
         case 'A' :
@@ -39,39 +32,42 @@ void request (int sockfd) {
         case 'C' :
             return chat(sockfd, string(strtok(NULL, " ")));
         case 'P' :
-            return put(sockfd);
+            recver = strtok(NULL, " ");
+            return put(sockfd, string(recver), string(strtok(NULL, " ")));
         case 'G' :
-            return get(sockfd);
+            return get(sockfd, string(strtok(NULL, " ")),
+                string(strtok(NULL, " ")), string(strtok(NULL, " ")));
     }
 }
-/*
-void response (int sockfd) {
-    getFile(sockfd);
-}
-*/
 
 int main (int argc , char *argv[]) {
     signal(SIGPIPE, SIG_IGN);
-    mkdir(database.c_str(), 777);
+    mkdir(database.c_str(), 0777);
 
     int server_fd = setUpServer(*(++argv)), max_fd = server_fd;
-    FD_SET(server_fd, &fds);
+    FD_SET(server_fd, &readFdSet);
     
     while (true) {
-        fd_set read_fds = fds, write_fds = fds;
-        check(select((max_fd + 1), &read_fds, &write_fds, NULL, NULL), "select failed");
+        fd_set read_fds = readFdSet, write_fds = writeFdSet;
+        check(select((max_fd + 1), &read_fds, &write_fds, NULL, NULL),
+            "select failed");
 
         for (int fd = 0; fd < (max_fd + 1); fd++) {
-            if (FD_ISSET(fd, &write_fds))
-                getFile();
             if (FD_ISSET(fd, &read_fds)) {
+                cout << "read fd : " << fd << endl;
                 if (fd != server_fd)
-                    response(fd);
+                    getRequest(fd);
                 else {
                     int client_fd = setUpClient(server_fd);
                     max_fd = max(client_fd, max_fd);
-                    FD_SET(client_fd, &fds);
+                    FD_SET(client_fd, &readFdSet);
                 }
+                cout << "*****************************\n";
+            }
+            if (FD_ISSET(fd, &write_fds)) {
+                cout << "write fd : " << fd << endl;
+                getFile(fd);
+                cout << "*****************************\n";
             }
         }
     }

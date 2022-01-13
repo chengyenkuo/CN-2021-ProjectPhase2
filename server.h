@@ -10,22 +10,23 @@ using namespace std;
 
 #define BACKLOG 10
 #define BUFFER_SIZE 4096
+
 /******************************/
 struct Service {
     FILE *fp;
-    long bytes, offset;
+    int bytes, offset;
     string sender, recver, path;
-    Service (string user) : fp(NULL), bytes(0), offset(0), sender(user), recver("") {}
+    Service (string user) : fp(NULL), bytes(0), offset(0), 
+        sender(user), recver(""), path("") {}
 };
 /******************************/
 map<string, unordered_set<string>> user2Friends;
 boost::bimap<int, string> fdUserBmp;
 map<int, Service> fd2Service;
 string database = "database";
+fd_set readFdSet, writeFdSet;
 char buffer[BUFFER_SIZE];
-fd_set fds;
 /******************************/
-void OK (int sockfd);
 int check (int exp, const char *msg);
 int numOfByte (int sockfd);
 int numOfFile (string path);
@@ -35,15 +36,14 @@ void setUpService(int sockfd, string user);
 void setUpUser (string user);
 void endService(int sockfd);
 void closeSocket (int sockfd);
+void OK (int sockfd);
 void ls (int sockfd);
+void add (int sockfd, string userB);
+void remove (int sockfd, string userB);
 void chat (int sockfd, string recver);
 void put (int sockfd, string recver, string type);
 void putFile (int sockfd);
 void get (int sockfd, string recver, string type, string file);
 void getFile (int sockfd);
-/******************************/
-
-void add (int sockfd, string userB);
-void remove (int sockfd, string userB);
-
+string sharedPath (string userA, string userB);
 /******************************/
