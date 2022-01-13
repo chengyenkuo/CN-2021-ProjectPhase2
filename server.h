@@ -4,45 +4,46 @@
 #include <netinet/in.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <dirent.h>
 
 using namespace std;
 
 #define BACKLOG 10
-#define BUFFER_SIZE 1024
-
+#define BUFFER_SIZE 4096
 /******************************/
 struct Service {
-    int mode;   // CONTROL、CHAT、 FILE、IMG
-    string sender, receiver;
-    FILE *chatFp, *fileFp, *imgFp;
     FILE *fp;
-
-    Service (string name) : sender(name) {}
+    long bytes, offset;
+    string sender, recver, path;
+    Service (string user) : fp(NULL), bytes(0), offset(0), sender(user), recver("") {}
 };
 /******************************/
-char buffer[BUFFER_SIZE];
-string database = "database";
 map<string, unordered_set<string>> user2Friends;
 boost::bimap<int, string> fdUserBmp;
 map<int, Service> fd2Service;
+string database = "database";
+char buffer[BUFFER_SIZE];
 fd_set fds;
 /******************************/
-int check (int exp, const char *msg) {
-    if (exp < 0) {
-        perror(msg);
-        exit(EXIT_FAILURE);
-    }
-    return exp;
-}
+void OK (int sockfd);
+int check (int exp, const char *msg);
+int numOfByte (int sockfd);
+int numOfFile (string path);
 int setUpServer (char *port);
-int setUpClient (int server_fd);
+int setUpClient (int sockfd);
+void setUpService(int sockfd, string user);
 void setUpUser (string user);
-void setUpService(int client_fd, string user);
-void endService(int client_fd);
-void endConnection (int client_fd);
-void ls (int client_fd);
-void add (int client_fd, string name);
-void remove (int client_fd, string name);
-void chat (int client_fd, string name);
-void file (int client_fd, string name);
-void img (int client_fd, string name);
+void endService(int sockfd);
+void closeSocket (int sockfd);
+void ls (int sockfd);
+void chat (int sockfd, string recver);
+void put (int sockfd, string recver, string type);
+void putFile (int sockfd);
+void get (int sockfd, string recver, string type, string file);
+void getFile (int sockfd);
+/******************************/
+
+void add (int sockfd, string userB);
+void remove (int sockfd, string userB);
+
+/******************************/

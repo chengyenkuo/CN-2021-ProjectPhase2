@@ -1,44 +1,54 @@
 #include "server.h"
 
-void parse (int client_fd, bool read) {
-    /*  check connection !  */
-    if (recv(client_fd, buffer, BUFFER_SIZE, MSG_PEEK) < 1) {
-        if (recv(client_fd, buffer, BUFFER_SIZE, MSG_PEEK) < 0)
-            cout << "errno : " << errno << endl;
-        endService(client_fd);
-        return;
+void request (int sockfd) {
+    /* check connection */
+    if (recv(sockfd, buffer, BUFFER_SIZE, MSG_PEEK) < 1) {
+        if (recv(sockfd, buffer, BUFFER_SIZE, MSG_PEEK) < 0)
+            cout << sockfd << " errno : " << errno << endl;
+        return closeSocket(sockfd);
     }
+
+    /* putting */
+    if (fd2Service.at(sockfd).bytes != 0)
+        return putFile(sockfd);
     
-    /* recv data */
-    bzero(buffer, sizeof(buffer));
-    if (recv(client_fd, buffer, BUFFER_SIZE, 0) < 1)
-        return endService(client_fd);
-    cout << "recv : " << buffer << endl;
-
-    /* check command : LOGIN、LIST、ADD、REMOVE、CHAT、LOGIN、IMG、OTHERS */
-    if (!strncmp(buffer, "LOGIN ", strlen("LOGIN ")))
-        setUpService(client_fd, string(buffer + strlen("LOGIN ")));
-    else if (!strncmp(buffer, "LIST ", strlen("LIST ")))
-        ls(client_fd);
-    else if (!strncmp(buffer, "ADD ", strlen("ADD ")))
-        add(client_fd, string(buffer + strlen("ADD ")));
-    else if (!strncmp(buffer, "REMOVE ", strlen("REMOVE ")))
-        remove(client_fd, string(buffer + strlen("REMOVE ")));
-    else if (!strncmp(buffer, "CHAT ", strlen("CHAT ")))
-        chat(client_fd, string(buffer + strlen("CHAT ")));
-    else if (!strncmp(buffer, "GET ", strlen("GET ")))
-        get(client_fd, string(buffer + strlen("GET ")));
-    else if (!strncmp(buffer, "PUT ", strlen("PUT ")))
-        put(client_fd, string(buffer + strlen("PUT ")));
-    else {
-        if (read) {
-
-        }
-        else {
-
-        }
+    int n = numOfByte(sockfd);
+    if (n < 1)
+        return;
+        
+    /* recv command */
+    bezero(buffer, BUFFER_SIZE);
+    if (recv(sockfd, buffer, BUFFER_SIZE, 0) < 1)
+        return closeSocket(sockfd);
+    OK(sockfd);
+    
+    /* parse command */
+    char command[BUFFER_SIZE];
+    memcpy(command, buffer, BUFFER_SIZE);
+    command = strtok(command, " ");
+    switch (command[0]) {
+        case 'L' :
+            if ((command = strtok(NULL, " ")) != NULL)
+                return setUpService(sockfd, string(command));
+            else
+                return ls(sockfd);
+        case 'A' :
+            return add(sockfd, string(strtok(NULL, " ")));
+        case 'R' :
+            return remove(sockfd, string(strtok(NULL, " ")));
+        case 'C' :
+            return chat(sockfd, string(strtok(NULL, " ")));
+        case 'P' :
+            return put(sockfd);
+        case 'G' :
+            return get(sockfd);
     }
 }
+/*
+void response (int sockfd) {
+    getFile(sockfd);
+}
+*/
 
 int main (int argc , char *argv[]) {
     signal(SIGPIPE, SIG_IGN);
@@ -52,12 +62,11 @@ int main (int argc , char *argv[]) {
         check(select((max_fd + 1), &read_fds, &write_fds, NULL, NULL), "select failed");
 
         for (int fd = 0; fd < (max_fd + 1); fd++) {
-            if (FD_ISSET(fd, &write_fds)) {
-                ;
-            }
+            if (FD_ISSET(fd, &write_fds))
+                getFile();
             if (FD_ISSET(fd, &read_fds)) {
                 if (fd != server_fd)
-                    parse(fd);
+                    response(fd);
                 else {
                     int client_fd = setUpClient(server_fd);
                     max_fd = max(client_fd, max_fd);
