@@ -5,10 +5,16 @@
         <div id="chat">
 
         </div>
-        <form method="post" id="send_mess" action="/send_mess">
+        <form method="POST" id="send_mess" action="/send_mess">
             <label for="text">Send text:</label><br>
             <input type="text" name="text"><br>
             <input type="submit" value="submit">
+            <input type="hidden" name="recver"/>
+        </form>
+        <form method="POST" id="send_file" action="/send_file">
+            <label for="text">Send file:</label><br>
+            <input type="file" name="youfile"><br>
+            <input type="submit" value="confirm submit">
             <input type="hidden" name="recver"/>
         </form>
     </body>
@@ -16,16 +22,27 @@
         var u = document.getElementById('user');
         var chat = document.getElementById('chat');
         u.innerText = window.location.pathname.split('/')[2];
-        document.getElementById("sendtext").elements["recver"].value=u.innerText;
-        fetch("/log/"+u.innerText)
+        document.getElementById("send_mess").elements["recver"].value=u.innerText;
+        fetch("/view/"+u.innerText)
         .then(response => response.json())
         .then(json => (function(x){
             var i;
-            for(i=0;i<x["log"].length;i++){
+            for(i=0;i<x["View"].length;i++){
                 var node = document.createElement("p");
-                let t = x["log"][i];
-                var textnode = document.createTextNode(`${t['sender']}->${t['recver']}: (${t['type']}) ${decodeURIComponent(t['content'].replace(/\+/g, " "))} -- ${t['timestamp']}`);  
-                node.appendChild(textnode);
+                let t = x["View"][i];
+                if(t['Type'] == "Mess"){
+                    var textnode = document.createTextNode(`${t['Sender']}:\n${decodeURIComponent(t['Content'].replace(/\+/g, " "))}`);
+                    node.appendChild(textnode);
+                }
+                else if(t['Type'] == "File"){
+                    var textnode = document.createTextNode(`${t['Sender']}:\n`);
+                    node.appendChild(textnode)
+                    var tmp = document.createElement("a");
+                    textnode = document.createTextNode(t['Content']);
+                    tmp.href = `/dload_file/${t['Sender']}&${t['Recver']}/${t['Content']}`;
+                    tmp.appendChild(textnode);
+                    node.appendChild(tmp);
+                }
                 chat.appendChild(node);
             }
         })(json));
