@@ -176,11 +176,6 @@ void putFile (int sockfd) {
     if (!fd2Service.at(sockfd).bytes)
         OK(sockfd);
 }
-string sharedPath (string userA, string userB) {
-    return database + "/" + ((userA < userB) ?
-        (userA + "&" + userB) : (userB + "&" + userA));
-}
-/******************************/
 void get (int sockfd, string recver, string type, string file) {
     cout << "get " << recver << " " << type << " " << file << endl;
 
@@ -191,7 +186,7 @@ void get (int sockfd, string recver, string type, string file) {
         fd2Service.at(sockfd).path = sharedPath(sender, recver)
              + "/" + type + "/" + file;
     
-    FILE *fp = fopen(fd2Service.at(sockfd).path.c_str(), "rb");
+    FILE *fp = fopen(fd2Service.at(sockfd).path.c_str(), "r");
     fseek(fp, 0, SEEK_END);
     int size = (int) ftell(fp);
     fclose(fp);
@@ -219,4 +214,8 @@ void getFile (int sockfd) {
         FD_CLR(sockfd, &writeFdSet);
     fclose(fp);
 }
-
+string sharedPath (string userA, string userB) {
+    return database + "/" + ((userA < userB) ?
+        (userA + "&" + userB) : (userB + "&" + userA));
+}
+/******************************/

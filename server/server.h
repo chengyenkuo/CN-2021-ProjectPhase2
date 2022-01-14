@@ -9,7 +9,7 @@
 using namespace std;
 
 #define BACKLOG 10
-#define BUFFER_SIZE 4096
+#define BUFFER_SIZE 1024
 
 /******************************/
 struct Service {
