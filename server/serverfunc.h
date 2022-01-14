@@ -136,10 +136,9 @@ void chat (int sockfd, string recver) {
     
     FILE *fp = fopen(path.c_str(), "r+");
     fseek(fp, -2, SEEK_END);
-    if (ftell(fp) < 10)
-        fprintf(fp, "{\"Sender\":\"%s\",\"Content\":\"%s\"}]}", sender.c_str(), buffer);
-    else
-        fprintf(fp, ",{\"Sender\":\"%s\",\"Content\":\"%s\"}]}", sender.c_str(), buffer);
+    if (ftell(fp) > 10)
+        fprintf(fp, ",");
+    appendChat(fp, sender, recver, "Mess", string(buffer));
     fclose(fp);
     OK(sockfd);
 }
