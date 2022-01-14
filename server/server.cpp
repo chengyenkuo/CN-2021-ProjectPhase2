@@ -35,8 +35,9 @@ void getRequest (int sockfd) {
             recver = strtok(NULL, " ");
             return put(sockfd, string(recver), string(strtok(NULL, " ")));
         case 'G' :
-            return get(sockfd, string(strtok(NULL, " ")),
-                string(strtok(NULL, " ")), string(strtok(NULL, " ")));
+            recver = strtok(NULL, " ");
+            type = strtok(NULL, " ");
+            return get(sockfd, string(recver), string(type), string(strtok(NULL, " ")));
     }
 }
 

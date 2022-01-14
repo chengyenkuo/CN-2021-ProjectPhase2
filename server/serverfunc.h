@@ -95,7 +95,8 @@ void add (int sockfd, string userB) {
     mkdir(path.c_str(), 0777);
     mkdir((path + "/FILE").c_str(), 0777);
     mkdir((path + "/IMAGE").c_str(), 0777);
-    FILE *fp = fopen((path + "/FILE/CHAT").c_str(), "w");
+    FILE *fp = fopen((path + "/CHAT").c_str(), "w");
+    fprintf(fp, "{\"View\":[]}");
     fclose(fp);
     OK(sockfd);
 }
@@ -124,7 +125,7 @@ void ls (int sockfd) {
 void chat (int sockfd, string recver) {
     cout << "chat\n";
     string sender = fd2Service.at(sockfd).sender,
-        path = sharedPath(sender, recver) + "/FILE/CHAT";
+        path = sharedPath(sender, recver) + "/CHAT";
 
     int size;
     if (recv(sockfd, &size, sizeof(int), 0) < 1)
@@ -133,21 +134,30 @@ void chat (int sockfd, string recver) {
     if (recv(sockfd, buffer, size, 0) < 1)
         closeSocket(sockfd);
     
-    sender += ":\n";
-    FILE *fp = fopen(path.c_str(), "a");
-    fwrite(sender.c_str(), 1, sender.length(), fp);
-    fwrite(buffer, sizeof(char), size, fp);
-    fwrite("\n", sizeof(char), 1, fp);
+    FILE *fp = fopen(path.c_str(), "r+");
+    fseek(fp, -2, SEEK_END);
+    if (ftell(fp) < 10)
+        fprintf(fp, "{\"Sender\":\"%s\",\"Content\":\"%s\"}]}", sender.c_str(), buffer);
+    else
+        fprintf(fp, ",{\"Sender\":\"%s\",\"Content\":\"%s\"}]}", sender.c_str(), buffer);
     fclose(fp);
     OK(sockfd);
 }
 void put (int sockfd, string recver, string type) {
-    cout << "put\n"
-    string sender = fd2Service.at(sockfd).sender;
-    fd2Service.at(sockfd).path = sharedPath(sender, recver) + "/" + type;
+    cout << "put\n";
     
-    int num = numOfFile(fd2Service.at(sockfd).path);
-    fd2Service.at(sockfd).path += "/[" + type + "_" + to_string(num) + "]";
+    string sender = fd2Service.at(sockfd).sender,
+        shared = sharedPath(sender, recver);
+    
+    int num = numOfFile(shared + "/" + type);
+    string file = "[" + type + "_" + to_string(num) + "]";
+
+    FILE *fp = fopen((shared + "/CHAT").c_str(), "a");
+    fprintf(fp, "%s:\n%s\n", sender.c_str(), file.c_str());
+    fclose(fp);
+    OK(sockfd);
+
+    fd2Service.at(sockfd).path = shared + "/" + type + "/" + file;
     fd2Service.at(sockfd).bytes = numOfByte(sockfd);
 }
 void putFile (int sockfd) {
@@ -172,9 +182,14 @@ string sharedPath (string userA, string userB) {
 }
 /******************************/
 void get (int sockfd, string recver, string type, string file) {
-    cout << "get\n";
-    fd2Service.at(sockfd).path = database + "/" +
-        fd2Service.at(sockfd).sender + "/" + recver + "/" + type + "/" + file;
+    cout << "get " << recver << " " << type << " " << file << endl;
+
+    string sender = fd2Service.at(sockfd).sender;
+    if (file.at(0) != '[')
+        fd2Service.at(sockfd).path = sharedPath(sender, recver) + "/CHAT";
+    else    
+        fd2Service.at(sockfd).path = sharedPath(sender, recver)
+             + "/" + type + "/" + file;
     
     FILE *fp = fopen(fd2Service.at(sockfd).path.c_str(), "rb");
     fseek(fp, 0, SEEK_END);
@@ -189,20 +204,19 @@ void get (int sockfd, string recver, string type, string file) {
 void getFile (int sockfd) {
     cout << "getFile\n";
     FILE *fp = fopen(fd2Service.at(sockfd).path.c_str(), "r");
-    cout << fd2Service.at(sockfd).path << endl;
-    fseek(fp, fd2Service.at(sockfd).offset, SEEK_SET);
-    cout << "getFile\n";
-    bzero(buffer, BUFFER_SIZE);
-    int n = fread(buffer, sizeof(char), BUFFER_SIZE, fp);
 
-    if (send(sockfd, buffer, n, 0) < 1)
+    cout << fd2Service.at(sockfd).path << " " << fd2Service.at(sockfd).offset << endl;
+
+    fseek(fp, fd2Service.at(sockfd).offset, SEEK_SET);
+    bzero(buffer, BUFFER_SIZE);
+    int size = fread(buffer, sizeof(char), BUFFER_SIZE, fp);
+
+    if (send(sockfd, buffer, size, 0) < 1)
         return closeSocket(sockfd);
-    fd2Service.at(sockfd).offset += n;
+    fd2Service.at(sockfd).offset += size;
     
-    if (feof(fp)) {
+    if (feof(fp))
         FD_CLR(sockfd, &writeFdSet);
-        OK(sockfd);
-    }
     fclose(fp);
 }
 
