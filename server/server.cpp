@@ -11,13 +11,13 @@ void getRequest (int sockfd) {
     /* putting */
     if (fd2Service.at(sockfd).bytes != 0)
         return putFile(sockfd);
-    cout << fd2Service.at(sockfd).bytes << endl;    
+      
     /* recv command */
     bzero(buffer, BUFFER_SIZE);
-    cout << fd2Service.at(sockfd).bytes << endl;
+    
     if (recv(sockfd, buffer, BUFFER_SIZE, 0) < 1)
         return closeSocket(sockfd);
-    cout << fd2Service.at(sockfd).bytes << endl;
+    
     cout << buffer << "#\n";
     
     /* parse command */

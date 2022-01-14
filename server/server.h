@@ -47,3 +47,7 @@ void get (int sockfd, string recver, string type, string file);
 void getFile (int sockfd);
 string sharedPath (string userA, string userB);
 /******************************/
+void appendChat(FILE *fp, string sender, string recver, string type, string content) {
+    fprintf(fp, "{\"Sender\":\"%s\",\"Recver\":\"%s\",\"Type\":\"%s\",\"Content\":\"%s\"}]}",
+            sender.c_str(), recver.c_str(), type.c_str(), content.c_str());
+}
