@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+
+<body>
+    <input type="file" id="theImgFile" onchange="onLoadImgFile()" />
+   <img   class="theImage">
+    <script type="text/javascript">
+        function onLoadImgFile() {
+            var theFileElem = document.getElementById("theImgFile");
+            // Get the File object selected by the user, and make sure it is a text file.
+            if (theFileElem.files.length != 0 && theFileElem.files[0].type.match(/image.*/)) {
+                // Create a FileReader and handle the onload and onerror events.
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    var theImgElem = document.querySelector(".theImage");
+                  //  theImgElem.src = e.target.result; //ProgressEvent.FileReader
+                     theImgElem.src =this.result //this為FIleReader
+                    //console.log(this);
+                    //Debug
+                    //console.log(e);
+                    //console.log("===========================")
+                    //console.log(e.target);
+                    //End Debug
+                };
+                reader.onerror = function (e) {
+                    alert("Cannot load img file");
+                };
+                // Read text file (the second parameter is optional - the default encoding is "UTF-8").
+                reader.readAsDataURL(theFileElem.files[0]);
+            } else {
+                alert("Please select a img file");
+            }
+        }
+    </script>
+</body>
+
+</html>

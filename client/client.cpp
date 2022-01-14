@@ -84,6 +84,7 @@ int main(int argc, char* argv[]){
     // start handling browser request...
     //fd_set readfds;
     bool log_in = false;
+    string user = "";
     while(1){
         /*
         FD_ZERO(&readfds);
@@ -137,6 +138,7 @@ int main(int argc, char* argv[]){
                                 map<string, string> tmp = parse_http_content(req.content);
                                 //send instr + username
                                 cout << "\033[1;32mReceive Username: \033[0m" << tmp["username"] << endl;
+                                user = tmp["username"];
                                 send_to_server(toserver_sockfd, "LOGIN " + tmp["username"]);
                                 string ce = recv_from_server(toserver_sockfd);
                                 if(ce == "OK"){
@@ -158,6 +160,7 @@ int main(int argc, char* argv[]){
                                 send_http_response(browser_sockfd, "." + req.url);
                             }
                             else{
+                                //send_http_response(browser_sockfd, "./basic/display.html");
                                 send_http_response(browser_sockfd, "./basic/login.html");
                             }
                         }
@@ -167,7 +170,7 @@ int main(int argc, char* argv[]){
                             // implement add friend, del friend, send message to friend
                             if(req.url == "/add"){
                                 map<string, string> tmp = parse_http_content(req.content);
-				cout << tmp["username"] << endl;
+				                cout << tmp["username"] << endl;
                                 send_to_server(toserver_sockfd, "ADD " + tmp["username"]);
                                 string ce = recv_from_server(toserver_sockfd);
                                 if(ce == "OK"){
@@ -194,7 +197,7 @@ int main(int argc, char* argv[]){
                                 // sending message to others
                                 map<string, string> tmp = parse_http_content(req.content);
                                 send_to_server(toserver_sockfd, "CHAT " + tmp["recver"]);
-                                send_to_server(toserver_sockfd, tmp["content"]);
+                                send_to_server(toserver_sockfd, tmp["text"]);
                                 string ce = recv_from_server(toserver_sockfd);
                                 if(ce == "OK"){
                                     cout << "\033[1;32mSending(Mess) Success\033[0m" << endl;
@@ -207,8 +210,8 @@ int main(int argc, char* argv[]){
                             else if(req.url == "/send_image"){
                                 // sending image
                                 map<string, string> tmp = parse_http_content(req.content);
-                                send_to_server(toserver_sockfd, "PUT " + tmp["recver"] + "IMAGE");
-                                send_to_server_file(toserver_sockfd, tmp["file"].c_str());
+                                send_to_server(toserver_sockfd, "PUT " + tmp["recver"] + " IMAGE");
+                                send_to_server_file(toserver_sockfd, ("./image/" + tmp["image"]).c_str());
                                 string ce = recv_from_server(toserver_sockfd);
                                 if(ce == "OK"){
                                     cout << "\033[1;32mSending(Image) Success\033[0m" << endl;
@@ -221,8 +224,8 @@ int main(int argc, char* argv[]){
                             else if(req.url == "/send_file"){
                                 // sending file
                                 map<string, string> tmp = parse_http_content(req.content);
-                                send_to_server(toserver_sockfd, "PUT " + tmp["recver"] + "FILE");
-                                send_to_server_file(toserver_sockfd, tmp["file"].c_str());
+                                send_to_server(toserver_sockfd, "PUT " + tmp["recver"] + " FILE");
+                                send_to_server_file(toserver_sockfd, ("./file/" + tmp["file"]).c_str());
                                 string ce = recv_from_server(toserver_sockfd);
                                 if(ce == "OK"){
                                     cout << "\033[1;32mSending(File) Success\033[0m" << endl;
@@ -237,19 +240,66 @@ int main(int argc, char* argv[]){
                             // implement open chatroom, list friend, click file
                             if(req.url == "/friends"){
                                 send_to_server(toserver_sockfd, "LIST");
-                                string temp = recv_from_server(toserver_sockfd);
-                                ofstream temp_fstream;
-                                temp_fstream.open("./data/friends.json");
-                                temp_fstream << temp;
-                                temp_fstream.close();
+                                string tmp = recv_from_server(toserver_sockfd);
+                                ofstream tmp_fstream;
+                                string path = "./data/friends.json";
+                                tmp_fstream.open(path);
+                                tmp_fstream << tmp;
+                                tmp_fstream.close();
                                 cout << "send friend list to browser" << endl;
-                                send_http_response(browser_sockfd, "./data/friends.json");
+                                send_http_response(browser_sockfd, path);
                             }
                             else if(req.url.substr(0,6) == "/chat/"){
                                 send_http_response(browser_sockfd, "./basic/chatroom.html");
                             }
                             else if(req.url.substr(0,6) == "/view/"){
-                                // temporarily left unsolved
+                                string target = req.url.substr(6);
+                                send_to_server(toserver_sockfd, "GET " + target + " FILE CHAT");
+                                string path = "./data/chat_record.json";
+                                //get the record from server
+                                recv_from_server_file(toserver_sockfd, path.c_str());
+                                cout << "record received" << endl;
+                                send_http_response(browser_sockfd, path);
+                            }
+                            else if(req.url.substr(0, 13) == "/dload_image/"){
+                                //must parse url to sender / recver / filename
+                                //b08902015&b08902069_[IMAGE_0]
+                                req.url = req.url.substr(13);
+                                int mark1 = req.url.find("&");
+                                string sender = req.url.substr(0, mark1);
+                                int mark2 = req.url.find("_");
+                                string recver = req.url.substr(mark1 + 1, mark2 - mark1 - 1);
+                                string filename = req.url.substr(mark2 + 1);
+                                if(user != sender)
+                                    recver = sender;
+                                cout << recver << " " << filename << endl;
+                                send_to_server(toserver_sockfd, "GET " + recver + " IMAGE " + filename);
+                                recv_from_server_file(toserver_sockfd, ("./image/" + filename).c_str());
+                                cout << "Recv file " + filename + " from server" << endl;
+                                make_image_html("/image/" + filename);
+                                send_http_response(browser_sockfd, "./basic/display_image.html");
+                            }
+                            else if(req.url.substr(0, 12) == "/dload_file/"){
+                                //must parse url to sender / recver / filename
+                                //b08902015&b08902069_[IMAGE_0]
+                                req.url = req.url.substr(12);
+                                int mark1 = req.url.find("&");
+                                string sender = req.url.substr(0, mark1);
+                                int mark2 = req.url.find("_");
+                                string recver = req.url.substr(mark1 + 1, mark2 - mark1 - 1);
+                                string filename = req.url.substr(mark2 + 1);
+                                if(user != sender)
+                                    recver = sender;
+                                cout << recver << " " << filename << endl;
+                                send_to_server(toserver_sockfd, "GET " + recver + " FILE " + filename);
+                                recv_from_server_file(toserver_sockfd, ("./client_dir_file/" + filename).c_str());
+                                cout << "Recv file " + filename + " from server" << endl;
+                                make_file_html("/client_dir_file/" + filename);
+                                send_http_response(browser_sockfd, "./basic/download_file.html");
+                            }
+                            else if(req.url.substr(0, 18) == "/client_dir_image/"){
+                                cout << "Catch!!" << endl;
+                                send_http_response(browser_sockfd, "." + req.url);
                             }
                             else{
                                 // redirect

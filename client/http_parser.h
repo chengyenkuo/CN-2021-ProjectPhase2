@@ -19,5 +19,7 @@ string recv_from_server(int sockfd); //
 void recv_from_server_file(int sockfd, const char* filename); //
 http_request get_http_request(int sockfd); //
 void send_http_response(int sockfd, string file); //
-void http_redirect(int sockfd, string root);
-map<string, string> parse_http_content(string content);
+void http_redirect(int sockfd, string root); //
+map<string, string> parse_http_content(string content); //
+void make_image_html(string path);
+void make_file_html(string path);

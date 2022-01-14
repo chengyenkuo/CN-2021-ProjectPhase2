@@ -203,3 +203,30 @@ map<string, string> parse_http_content(string content){
     }
     return ret;
 }
+/*<html><body><h2>The file has arrived</h2>
+<img src="../image/a.jpeg"></body></html>*/
+void make_image_html(string path){
+    string ori_template = "<!DOCTYPE html><html><body><h2>The Image has arrived</h2><img src=";
+    ori_template += "\"" + path + "\" + alt=\" The Sent Image \"/>";
+    ori_template += "</body></html>";
+    ofstream tmp_fstream;
+    //cout << ori_template << endl;
+    tmp_fstream.open("./basic/display_image.html");
+    tmp_fstream << ori_template;
+    tmp_fstream.close();
+    return;
+}
+/*<html><body><h2>The file has arrived</h2>
+<a download href="../image/a.txt">Click to download</a>
+</body></html>*/
+void make_file_html(string path){
+    string ori_template = "<!DOCTYPE html><html><body><h2>The File has arrived</h2><a download href=";
+    ori_template += "\"" + path + "\">Click to download";
+    ori_template += "</a></body></html>";
+    ofstream tmp_fstream;
+    //cout << ori_template << endl;
+    tmp_fstream.open("./basic/download_file.html");
+    tmp_fstream << ori_template;
+    tmp_fstream.close();
+    return;
+}
