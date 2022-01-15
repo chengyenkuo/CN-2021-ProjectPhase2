@@ -18,7 +18,7 @@ void getRequest (int sockfd) {
     if (recv(sockfd, buffer, BUFFER_SIZE, 0) < 1)
         return closeSocket(sockfd);
     
-    cout << buffer << "#\n";
+    cout << "#" << buffer << "#\n";
     
     /* parse command */
     char *cmd = strtok(buffer, " "), *recver, *type;
@@ -53,12 +53,11 @@ int main (int argc , char *argv[]) {
     
     while (true) {
         fd_set read_fds = readFdSet, write_fds = writeFdSet;
-        check(select((max_fd + 1), &read_fds, &write_fds, NULL, NULL),
-            "select failed");
+        check(select((max_fd + 1), &read_fds, &write_fds, NULL, NULL), "select failed");
 
         for (int fd = 0; fd < (max_fd + 1); fd++) {
             if (FD_ISSET(fd, &read_fds)) {
-                cout << "read fd : " << fd << endl;
+                cout << "read from fd : " << fd << endl;
                 if (fd != server_fd)
                     getRequest(fd);
                 else {
@@ -69,7 +68,7 @@ int main (int argc , char *argv[]) {
                 cout << "*****************************\n";
             }
             if (FD_ISSET(fd, &write_fds)) {
-                cout << "write fd : " << fd << endl;
+                cout << "write to fd : " << fd << endl;
                 getFile(fd);
                 cout << "*****************************\n";
             }
