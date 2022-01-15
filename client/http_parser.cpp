@@ -132,7 +132,7 @@ void send_to_server(int sockfd, string instr){
 string recv_from_server(int sockfd){
     int size;
     read(sockfd, &size, sizeof(size));
-    cout << "Friend size is : " << size << endl;
+    cout << "size is : " << size << endl;
     int cnt = 0;
     char buffer[BUFF_SIZE];
     string result = "";
@@ -152,10 +152,12 @@ void send_to_server_file(int sockfd, const char* filename){
     stat(filename, &st);
     size = (int)st.st_size;
     write(sockfd, &size, sizeof(size));
+    cout << "Finish writing bytenum " << size << " to server~" << endl;
     int sent_cnt = 0;
     int cur_bytes_read;
     char buffer[BUFF_SIZE];
     while(sent_cnt < size){
+        cout << "In while loop" << endl;
         if((cur_bytes_read = fread(buffer, 1, sizeof(buffer), fp)) <= 0){
             break;
         }
@@ -177,11 +179,13 @@ void recv_from_server_file(int sockfd, const char* filename){
     FILE *fp = fopen(filename, "wb");
     int size;
     read(sockfd, &size, sizeof(size));
+    cout << "Recv size : " << size << endl;
     int cnt = 0;
     char buffer[BUFF_SIZE];
     while(cnt < size){
         int n = read(sockfd, buffer, min(sizeof(buffer), (long unsigned int)(size - cnt)));
         cnt += n;
+        cout << "This round recv " << n << " byte" << endl;
         fwrite(buffer, 1, n, fp);
         bzero(buffer, sizeof(buffer));
     }
@@ -207,7 +211,7 @@ map<string, string> parse_http_content(string content){
 <img src="../image/a.jpeg"></body></html>*/
 void make_image_html(string path){
     string ori_template = "<!DOCTYPE html><html><body><h2>The Image has arrived</h2><img src=";
-    ori_template += "\"" + path + "\" + alt=\" The Sent Image \"/>";
+    ori_template += "\"" + path + "\"" +  "alt=\" The Sent Image \"/>";
     ori_template += "</body></html>";
     ofstream tmp_fstream;
     //cout << ori_template << endl;

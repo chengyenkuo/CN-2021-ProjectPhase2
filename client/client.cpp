@@ -11,7 +11,7 @@
 #include "http_parser.h"
 #include <algorithm>
 #include <filesystem>
-
+#include <signal.h>
 #define BUFF_SIZE 1024
 #define ERR_EXIT(a){ perror(a); exit(1); }
 using namespace std;
@@ -73,6 +73,7 @@ int init_server(int port, struct sockaddr_in &server_addr){
     return server_sockfd;
 }
 int main(int argc, char* argv[]){
+    signal(SIGPIPE, SIG_IGN);
     struct sockaddr_in cli_addr, serv_addr;
     char buffer[BUFF_SIZE] = {};
     // one for communicating with server(as client), one for recieving browser's request(as server)
@@ -80,7 +81,7 @@ int main(int argc, char* argv[]){
     int tobrowser_sockfd = init_server(atoi(argv[2]), serv_addr);
     int browser_sockfd;
     bool browser_connected = 0;
-    cout << "\033[1;36mFinish Initialization...\033[1;36m" << endl;
+    cout << "\033[1;35mLet's get started...\033[1;35m" << endl;
     // start handling browser request...
     //fd_set readfds;
     bool log_in = false;
@@ -122,12 +123,17 @@ int main(int argc, char* argv[]){
             else{
                 http_request req = get_http_request(browser_sockfd);
                 cout << "\033[1;31mGet Request\033[0m" << endl;
-                req.display();
+                //req.display();
                 if(req.url.substr(0, 7) == "/image/"){
                     send_http_response(browser_sockfd, "." + req.url);
                 }
                 else if(req.url == "/favicon.ico"){
                     send_http_response(browser_sockfd, "./image/ig_favicon.ico");
+                }
+                else if(req.url.substr(0, 11) == "/client_dir"){
+                    cout << "sending image file to browser" << endl;
+                    send_http_response(browser_sockfd, "." + req.url);
+                    cout << "finish sending file to browser" << endl;
                 }
                 else{
                     if(!log_in){
@@ -226,6 +232,7 @@ int main(int argc, char* argv[]){
                                 map<string, string> tmp = parse_http_content(req.content);
                                 send_to_server(toserver_sockfd, "PUT " + tmp["recver"] + " FILE");
                                 send_to_server_file(toserver_sockfd, ("./file/" + tmp["file"]).c_str());
+                                cout << "End of transmitting file" << endl;
                                 string ce = recv_from_server(toserver_sockfd);
                                 if(ce == "OK"){
                                     cout << "\033[1;32mSending(File) Success\033[0m" << endl;
@@ -274,9 +281,9 @@ int main(int argc, char* argv[]){
                                     recver = sender;
                                 cout << recver << " " << filename << endl;
                                 send_to_server(toserver_sockfd, "GET " + recver + " IMAGE " + filename);
-                                recv_from_server_file(toserver_sockfd, ("./image/" + filename).c_str());
+                                recv_from_server_file(toserver_sockfd, ("./client_dir_image/" + filename).c_str());
                                 cout << "Recv file " + filename + " from server" << endl;
-                                make_image_html("/image/" + filename);
+                                make_image_html("../client_dir_image/" + filename);
                                 send_http_response(browser_sockfd, "./basic/display_image.html");
                             }
                             else if(req.url.substr(0, 12) == "/dload_file/"){
@@ -294,12 +301,8 @@ int main(int argc, char* argv[]){
                                 send_to_server(toserver_sockfd, "GET " + recver + " FILE " + filename);
                                 recv_from_server_file(toserver_sockfd, ("./client_dir_file/" + filename).c_str());
                                 cout << "Recv file " + filename + " from server" << endl;
-                                make_file_html("/client_dir_file/" + filename);
+                                make_file_html("../client_dir_file/" + filename);
                                 send_http_response(browser_sockfd, "./basic/download_file.html");
-                            }
-                            else if(req.url.substr(0, 18) == "/client_dir_image/"){
-                                cout << "Catch!!" << endl;
-                                send_http_response(browser_sockfd, "." + req.url);
                             }
                             else{
                                 // redirect
